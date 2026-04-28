@@ -33,35 +33,85 @@ const STYLE_LABELS: Record<string, string> = {
   bold: 'בולד',
 };
 
-// Default marker positions per area for a typical portrait selfie
-const AREA_DEFAULTS: Record<string, { x: number; y: number }> = {
-  eyes:       { x: 35, y: 38 },
-  eyeliner:   { x: 35, y: 40 },
-  brows:      { x: 35, y: 30 },
-  lips:       { x: 50, y: 70 },
-  blush:      { x: 22, y: 55 },
-  base:       { x: 50, y: 55 },
-  foundation: { x: 50, y: 55 },
+interface Landmarks {
+  left_eye: { x: number; y: number };
+  right_eye: { x: number; y: number };
+  left_brow: { x: number; y: number };
+  right_brow: { x: number; y: number };
+  lips: { x: number; y: number };
+  left_cheek: { x: number; y: number };
+  right_cheek: { x: number; y: number };
+  nose: { x: number; y: number };
+}
+
+const DEFAULT_LANDMARKS: Landmarks = {
+  left_eye:    { x: 35, y: 38 },
+  right_eye:   { x: 65, y: 38 },
+  left_brow:   { x: 35, y: 30 },
+  right_brow:  { x: 65, y: 30 },
+  lips:        { x: 50, y: 70 },
+  left_cheek:  { x: 25, y: 55 },
+  right_cheek: { x: 75, y: 55 },
+  nose:        { x: 50, y: 52 },
 };
 
-// Allowed coordinate ranges per area
-const AREA_RANGES: Record<string, { xMin: number; xMax: number; yMin: number; yMax: number }> = {
-  eyes:       { xMin: 15, xMax: 85, yMin: 28, yMax: 50 },
-  eyeliner:   { xMin: 15, xMax: 85, yMin: 28, yMax: 50 },
-  brows:      { xMin: 15, xMax: 85, yMin: 18, yMax: 40 },
-  lips:       { xMin: 25, xMax: 75, yMin: 58, yMax: 82 },
-  blush:      { xMin: 5,  xMax: 95, yMin: 42, yMax: 68 },
-  base:       { xMin: 15, xMax: 85, yMin: 28, yMax: 82 },
-  foundation: { xMin: 15, xMax: 85, yMin: 28, yMax: 82 },
-};
+async function detectLandmarks(base64: string, mimeType: string): Promise<Landmarks> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      response_format: { type: 'json_object' },
+      max_tokens: 300,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a face landmark detector. Look at the image and return the x,y positions (as percentages 0-100, where x=left→right, y=top→bottom) of these facial points. Return ONLY valid JSON, no extra text:
+{
+  "left_eye": {"x": number, "y": number},
+  "right_eye": {"x": number, "y": number},
+  "left_brow": {"x": number, "y": number},
+  "right_brow": {"x": number, "y": number},
+  "lips": {"x": number, "y": number},
+  "left_cheek": {"x": number, "y": number},
+  "right_cheek": {"x": number, "y": number},
+  "nose": {"x": number, "y": number}
+}
+If no face is detected, return {"no_face": true}.`,
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Detect facial landmarks.' },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } },
+          ],
+        },
+      ],
+    });
 
-function fixMarkerPosition(area: string, x: number, y: number): { x: number; y: number } {
-  const range = AREA_RANGES[area];
-  const def = AREA_DEFAULTS[area] ?? { x: 50, y: 50 };
-  if (!range) return def;
-  const inRange = x >= range.xMin && x <= range.xMax && y >= range.yMin && y <= range.yMax;
-  if (!inRange) return def;
-  return { x, y };
+    const raw = JSON.parse(response.choices[0].message.content ?? '{}');
+    if (raw.no_face) return DEFAULT_LANDMARKS;
+    return { ...DEFAULT_LANDMARKS, ...raw };
+  } catch {
+    return DEFAULT_LANDMARKS;
+  }
+}
+
+function getMarkerForArea(area: string, landmarks: Landmarks): { x: number; y: number } {
+  switch (area) {
+    case 'eyes':
+    case 'eyeliner':
+      return { x: (landmarks.left_eye.x + landmarks.right_eye.x) / 2, y: landmarks.left_eye.y };
+    case 'brows':
+      return { x: (landmarks.left_brow.x + landmarks.right_brow.x) / 2, y: landmarks.left_brow.y };
+    case 'lips':
+      return landmarks.lips;
+    case 'blush':
+      return landmarks.left_cheek;
+    case 'base':
+    case 'foundation':
+      return landmarks.nose;
+    default:
+      return { x: 50, y: 50 };
+  }
 }
 
 function buildSystemPrompt(goal: string, style: string, lang: string): string {
@@ -72,8 +122,6 @@ function buildSystemPrompt(goal: string, style: string, lang: string): string {
 סגנון רצוי: ${style}
 שפה: ${lang}
 
----
-
 הטון שלך הוא כמו חברה טובה שמבינה באיפור — נחמדה, ישירה, עממית.
 את מחמיאה כשיש על מה, אבל גם אומרת בדיוק מה צריך לתקן ואיך.
 
@@ -83,51 +131,37 @@ recommendation: "הייתי מרככת טיפה את הקצה החיצוני —
 
 דוגמה נוספת:
 compliment: "השפתון יושב יפה ומתאים ללוק."
-recommendation: "רק בקצה הימני של השפה כדאי לנקות טיפה עם מקלון, כדי שהקו ייראה חד וסימטרי."
+recommendation: "רק בקצה הימני של השפה כדאי לנקות טיפה עם מקלון, כדי שהקו ייראה חד וסימטרי. זה לוקח שניות ומשנה את כל המראה."
 
----
-
-חוקים חשובים:
+חוקים:
 - אל תדברי על מבנה הפנים, רק על האיפור
 - בדיוק 3 תיקונים
-- כל recommendation חייב להיות לפחות 2 משפטים — לא ביטוי קצר של 5 מילים
+- כל recommendation חייב להיות לפחות 2 משפטים
 - לא להשתמש במילים: גרוע, בעייתי, לא טוב, מכוער
-- כן להשתמש: הייתי מרככת, הייתי מנקה, כדאי לחדד, אפשר לאזן, זה כבר יפה רק ללטש
-
----
+- כן להשתמש: הייתי מרככת, הייתי מנקה, כדאי לחדד, אפשר לאזן
 
 בדיקת תמונה:
 אם אין פנים ברורות → {"is_valid": false, "message": "לא זוהו פנים ברורות בתמונה."}
 אם אין איפור נראה לעין → {"is_valid": false, "message": "לא זוהה איפור ברור בתמונה."}
 
----
-
-אם התמונה תקינה, החזר JSON בלבד — בלי שום טקסט מחוץ ל־JSON:
-
+אם התמונה תקינה, החזר JSON בלבד:
 {
   "is_valid": true,
   "score": number,
-  "summary": "משפט אחד נחמד וקצר על המצב הכללי של האיפור",
+  "summary": "משפט אחד נחמד על המצב הכללי",
   "fixes": [
     {
       "area": "eyes או lips או brows או base או blush",
-      "title": "כותרת קצרה של התיקון",
-      "compliment": "מחמאה קצרה וספציפית על האזור הזה",
-      "recommendation": "לפחות שני משפטים — מה לתקן, איפה בדיוק, ואיך לעשות את זה",
-      "location_explanation": "תיאור קצר של מיקום הנקודה",
-      "marker_position": {"x": number, "y": number}
+      "title": "כותרת קצרה",
+      "compliment": "מחמאה קצרה וספציפית",
+      "recommendation": "לפחות שני משפטים — מה לתקן, איפה, ואיך",
+      "location_explanation": "תיאור קצר של המיקום"
     }
   ]
 }
 
-כללי marker_position — חובה לציית:
-x ו-y הם אחוזים (0–100): x = שמאל לימין, y = למעלה למטה.
-- עיניים/אייליינר: y בין 28–50
-- גבות: y בין 18–40
-- שפתיים: y בין 58–82, x בין 25–75
-- סומק: y בין 42–68
-- בסיס: y בין 28–82
-אין לשים נקודות על שיער, בגדים, רקע, או אוויר מחוץ לפנים.`;
+אל תוסיפי marker_position — זה יטופל בנפרד.
+אל תוסיפי שום טקסט מחוץ ל־JSON.`;
 }
 
 app.post('/analyze', upload.single('image'), async (req, res) => {
@@ -148,40 +182,34 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
       lang
     );
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      response_format: { type: 'json_object' },
-      max_tokens: 1500,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'נתחי את האיפור בתמונה.' },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${base64}`,
-                detail: 'high',
-              },
-            },
-          ],
-        },
-      ],
-    });
+    // Run landmark detection and makeup analysis in parallel
+    const [landmarks, analysisResponse] = await Promise.all([
+      detectLandmarks(base64, mimeType),
+      openai.chat.completions.create({
+        model: 'gpt-4o',
+        response_format: { type: 'json_object' },
+        max_tokens: 1500,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'נתחי את האיפור בתמונה.' },
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } },
+            ],
+          },
+        ],
+      }),
+    ]);
 
-    const raw = response.choices[0].message.content ?? '{}';
+    const raw = analysisResponse.choices[0].message.content ?? '{}';
     const result = JSON.parse(raw);
 
-    // Fix marker positions that are outside expected face regions
+    // Inject accurate marker positions from landmark detection
     if (result.is_valid && Array.isArray(result.fixes)) {
       result.fixes = result.fixes.map((fix: any) => ({
         ...fix,
-        marker_position: fixMarkerPosition(
-          fix.area,
-          fix.marker_position?.x ?? 50,
-          fix.marker_position?.y ?? 50
-        ),
+        marker_position: getMarkerForArea(fix.area, landmarks),
       }));
     }
 
