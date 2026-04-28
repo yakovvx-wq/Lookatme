@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "AI Makeup Quick Fix",
+    "slug": "ai-makeup-quick-fix",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FDF5EF"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourcompany.aimakeupquickfix",
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need camera access to analyze your makeup",
+        "NSPhotoLibraryUsageDescription": "We need photo library access to upload your makeup photo"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FDF5EF"
+      },
+      "package": "com.yourcompany.aimakeupquickfix",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ],
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
