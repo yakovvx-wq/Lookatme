@@ -159,12 +159,8 @@ recommendation: "הייתי מרככת טיפה את הקצה החיצוני —
 - "blush" — סומק ולחיים
 - "base" — בסיס ועור
 
-בדיקת תמונה:
-דחי את התמונה רק אם אין פנים אנושיות ברורות כלל (תמונה של חפץ, בעל חיים, נוף וכו').
-אם יש פנים — גם ללא איפור ברור — החזר תוצאה תקינה עם score נמוך.
-אם אין פנים ברורות → {"is_valid": false, "message": "לא זוהו פנים ברורות בתמונה."}
-
-אם תקינה, החזר JSON בלבד:
+החזר תמיד JSON תקין, גם אם האיפור לא ברור. אם אין איפור ברור — תני score נמוך ו-3 עצות בסיסיות.
+החזר JSON בלבד:
 {
   "is_valid": true,
   "score": number,
@@ -226,8 +222,11 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     const raw = analysisResponse.choices[0].message.content ?? '{}';
     const result = JSON.parse(raw);
 
+    // Always treat as valid — never block real user photos
+    result.is_valid = true;
+
     // Add zone info to each fix
-    if (result.is_valid && Array.isArray(result.fixes)) {
+    if (Array.isArray(result.fixes)) {
       result.fixes = result.fixes.map((fix: any) => ({
         ...fix,
         zone: ZONES[fix.area] ?? ZONES.base,
