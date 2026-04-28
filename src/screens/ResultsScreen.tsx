@@ -75,6 +75,7 @@ export default function ResultsScreen() {
         <View style={styles.imageSection}>
           <ImageWithMarkers
             imageUri={imageUri}
+            faceImage={result.face_image}
             fixes={result.fixes ?? []}
             showAll={isPro}
           />

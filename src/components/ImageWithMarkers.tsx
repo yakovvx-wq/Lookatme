@@ -5,14 +5,16 @@ import { COLORS } from '../theme';
 
 interface ImageWithMarkersProps {
   imageUri: string;
+  faceImage?: string;
   fixes: Fix[];
   showAll?: boolean;
 }
 
-const MARKER_SIZE = 28;
+const ZONE_COLORS = ['#E8A0BF', '#B784A7', '#C9A0DC', '#9B72AA', '#DBA1C3'];
 
 export default function ImageWithMarkers({
   imageUri,
+  faceImage,
   fixes,
   showAll = false,
 }: ImageWithMarkersProps) {
@@ -23,32 +25,68 @@ export default function ImageWithMarkers({
     setContainerSize({ width, height });
   };
 
+  const displayUri = faceImage ?? imageUri;
   const visibleFixes = showAll ? fixes : fixes.slice(0, 1);
+  const lockedFixes = showAll ? [] : fixes.slice(1);
 
   return (
     <View style={styles.container} onLayout={handleLayout}>
-      <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+      <Image source={{ uri: displayUri }} style={styles.image} resizeMode="cover" />
+
       {containerSize.width > 0 && (
         <View style={StyleSheet.absoluteFillObject as object} pointerEvents="none">
+          {/* Visible zone overlays */}
           {visibleFixes.map((fix, i) => {
-            const left = containerSize.width * (fix.marker_position.x / 100) - MARKER_SIZE / 2;
-            const top = containerSize.height * (fix.marker_position.y / 100) - MARKER_SIZE / 2;
+            if (!fix.zone) return null;
+            const { x, y, w, h, label, number } = fix.zone;
+            const color = ZONE_COLORS[i % ZONE_COLORS.length];
             return (
-              <View key={i} style={[styles.marker, { left, top }]}>
-                <Text style={styles.markerText}>{i + 1}</Text>
+              <View
+                key={i}
+                style={[
+                  styles.zone,
+                  {
+                    left: `${x}%` as any,
+                    top: `${y}%` as any,
+                    width: `${w}%` as any,
+                    height: `${h}%` as any,
+                    borderColor: color,
+                    backgroundColor: color + '33',
+                  },
+                ]}
+              >
+                <View style={[styles.zoneBadge, { backgroundColor: color }]}>
+                  <Text style={styles.zoneBadgeText}>{number}</Text>
+                </View>
+                <Text style={[styles.zoneLabel, { color }]}>{label}</Text>
               </View>
             );
           })}
-          {!showAll && fixes.length > 1 &&
-            fixes.slice(1).map((fix, i) => {
-              const left = containerSize.width * (fix.marker_position.x / 100) - MARKER_SIZE / 2;
-              const top = containerSize.height * (fix.marker_position.y / 100) - MARKER_SIZE / 2;
-              return (
-                <View key={`locked-${i}`} style={[styles.marker, styles.markerLocked, { left, top }]}>
-                  <Text style={styles.markerText}>{i + 2}</Text>
+
+          {/* Locked zone overlays (blurred) */}
+          {lockedFixes.map((fix, i) => {
+            if (!fix.zone) return null;
+            const { x, y, w, h, number } = fix.zone;
+            return (
+              <View
+                key={`locked-${i}`}
+                style={[
+                  styles.zone,
+                  styles.zoneLocked,
+                  {
+                    left: `${x}%` as any,
+                    top: `${y}%` as any,
+                    width: `${w}%` as any,
+                    height: `${h}%` as any,
+                  },
+                ]}
+              >
+                <View style={[styles.zoneBadge, { backgroundColor: COLORS.muted }]}>
+                  <Text style={styles.zoneBadgeText}>{number}</Text>
                 </View>
-              );
-            })}
+              </View>
+            );
+          })}
         </View>
       )}
     </View>
@@ -67,29 +105,38 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  marker: {
+  zone: {
     position: 'absolute',
-    width: MARKER_SIZE,
-    height: MARKER_SIZE,
-    borderRadius: MARKER_SIZE / 2,
-    backgroundColor: COLORS.roseMid,
     borderWidth: 2,
-    borderColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 5,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 4,
+    gap: 4,
   },
-  markerLocked: {
-    backgroundColor: COLORS.muted,
+  zoneLocked: {
+    borderColor: COLORS.muted,
+    backgroundColor: 'rgba(150,150,150,0.15)',
     opacity: 0.6,
   },
-  markerText: {
-    color: COLORS.white,
+  zoneBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoneBadgeText: {
+    color: '#fff',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
+  },
+  zoneLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 3,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });

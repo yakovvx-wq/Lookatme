@@ -2,9 +2,13 @@ export type Language = 'en' | 'he';
 export type Goal = 'daily' | 'work' | 'date' | 'event' | 'photo';
 export type Style = 'natural' | 'clean' | 'softGlam' | 'fullGlam' | 'dramatic' | 'bold';
 
-export interface MarkerPosition {
+export interface Zone {
   x: number;
   y: number;
+  w: number;
+  h: number;
+  label: string;
+  number: number;
 }
 
 export interface Fix {
@@ -13,13 +17,14 @@ export interface Fix {
   compliment: string;
   recommendation: string;
   location_explanation: string;
-  marker_position: MarkerPosition;
+  zone: Zone;
 }
 
 export interface AnalysisResult {
   score: number;
   summary: string;
   fixes: Fix[];
+  face_image?: string;
 }
 
 export interface AnalysisError {

@@ -90,6 +90,7 @@ export default function AnalyzingScreen() {
           score: result.score,
           summary: result.summary,
           fixes: result.fixes,
+          face_image: result.face_image,
         });
         navigation.replace(isRescan ? 'Rescan' : 'Results');
       } catch (err) {
