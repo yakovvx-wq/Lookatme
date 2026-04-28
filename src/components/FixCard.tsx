@@ -27,8 +27,18 @@ export default function FixCard({ fix, index, locked = false, onUnlock, isRTL }:
             style={[styles.title, { textAlign: isRTL ? 'right' : 'left' }]}
             numberOfLines={locked ? 1 : undefined}
           >
-            {locked ? '••••••••••••' : fix.text}
+            {locked ? '••••••••••••' : fix.title}
           </Text>
+          {!locked && (
+            <>
+              <Text style={[styles.compliment, { textAlign: isRTL ? 'right' : 'left' }]}>
+                {fix.compliment}
+              </Text>
+              <Text style={[styles.recommendation, { textAlign: isRTL ? 'right' : 'left' }]}>
+                {fix.recommendation}
+              </Text>
+            </>
+          )}
         </View>
 
         {locked && (
@@ -61,7 +71,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   row: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: SPACING.sm,
   },
   numberCircle: {
@@ -72,34 +82,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    marginTop: 2,
   },
   numberText: {
     color: COLORS.white,
     fontWeight: '700',
     fontSize: 13,
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.cream,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
   textContainer: {
     flex: 1,
+    gap: 4,
   },
   title: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.dark,
-    marginBottom: 4,
   },
-  instruction: {
+  compliment: {
+    fontSize: 13,
+    color: COLORS.roseMid,
+    lineHeight: 19,
+  },
+  recommendation: {
     fontSize: 13,
     color: COLORS.muted,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   lockButton: {
     padding: SPACING.xs,

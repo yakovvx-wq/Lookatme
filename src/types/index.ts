@@ -2,10 +2,18 @@ export type Language = 'en' | 'he';
 export type Goal = 'daily' | 'work' | 'date' | 'event' | 'photo';
 export type Style = 'natural' | 'clean' | 'softGlam' | 'fullGlam' | 'dramatic' | 'bold';
 
-export interface Fix {
-  text: string;
+export interface MarkerPosition {
   x: number;
   y: number;
+}
+
+export interface Fix {
+  area: string;
+  title: string;
+  compliment: string;
+  recommendation: string;
+  location_explanation: string;
+  marker_position: MarkerPosition;
 }
 
 export interface AnalysisResult {

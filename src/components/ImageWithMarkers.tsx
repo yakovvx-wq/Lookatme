@@ -31,8 +31,8 @@ export default function ImageWithMarkers({
       {containerSize.width > 0 && (
         <View style={StyleSheet.absoluteFillObject as object} pointerEvents="none">
           {visibleFixes.map((fix, i) => {
-            const left = containerSize.width * (fix.x / 100) - MARKER_SIZE / 2;
-            const top = containerSize.height * (fix.y / 100) - MARKER_SIZE / 2;
+            const left = containerSize.width * (fix.marker_position.x / 100) - MARKER_SIZE / 2;
+            const top = containerSize.height * (fix.marker_position.y / 100) - MARKER_SIZE / 2;
             return (
               <View key={i} style={[styles.marker, { left, top }]}>
                 <Text style={styles.markerText}>{i + 1}</Text>
@@ -41,8 +41,8 @@ export default function ImageWithMarkers({
           })}
           {!showAll && fixes.length > 1 &&
             fixes.slice(1).map((fix, i) => {
-              const left = containerSize.width * (fix.x / 100) - MARKER_SIZE / 2;
-              const top = containerSize.height * (fix.y / 100) - MARKER_SIZE / 2;
+              const left = containerSize.width * (fix.marker_position.x / 100) - MARKER_SIZE / 2;
+              const top = containerSize.height * (fix.marker_position.y / 100) - MARKER_SIZE / 2;
               return (
                 <View key={`locked-${i}`} style={[styles.marker, styles.markerLocked, { left, top }]}>
                   <Text style={styles.markerText}>{i + 2}</Text>
