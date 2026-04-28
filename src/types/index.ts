@@ -2,16 +2,10 @@ export type Language = 'en' | 'he';
 export type Goal = 'daily' | 'work' | 'date' | 'event' | 'photo';
 export type Style = 'natural' | 'clean' | 'softGlam' | 'fullGlam' | 'dramatic' | 'bold';
 
-export interface MarkerPosition {
+export interface Fix {
+  text: string;
   x: number;
   y: number;
-}
-
-export interface Fix {
-  area: string;
-  title: string;
-  simple_instruction: string;
-  marker_position: MarkerPosition;
 }
 
 export interface AnalysisResult {
@@ -21,13 +15,12 @@ export interface AnalysisResult {
 }
 
 export interface AnalysisError {
-  is_valid_makeup_photo: false;
-  error_type: 'NO_FACE_DETECTED' | 'NO_VISIBLE_MAKEUP';
+  is_valid: false;
   message: string;
 }
 
 export interface AnalysisSuccess extends AnalysisResult {
-  is_valid_makeup_photo: true;
+  is_valid: true;
 }
 
 export type AnalysisResponse = AnalysisSuccess | AnalysisError;

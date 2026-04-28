@@ -4,16 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Fix } from '../types';
 import { COLORS, SPACING, RADIUS } from '../theme';
 
-const AREA_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  eyes: 'eye-outline',
-  eyeliner: 'pencil-outline',
-  lips: 'heart-outline',
-  brows: 'remove-outline',
-  blush: 'color-palette-outline',
-  highlight: 'sunny-outline',
-  foundation: 'layers-outline',
-};
-
 interface FixCardProps {
   fix: Fix;
   index: number;
@@ -23,35 +13,22 @@ interface FixCardProps {
 }
 
 export default function FixCard({ fix, index, locked = false, onUnlock, isRTL }: FixCardProps) {
-  const iconName = AREA_ICONS[fix.area] ?? 'brush-outline';
   const rowDir = isRTL ? 'row-reverse' : 'row';
 
   return (
     <View style={[styles.card, locked && styles.cardLocked]}>
       <View style={[styles.row, { flexDirection: rowDir }]}>
-        {/* Number circle */}
         <View style={styles.numberCircle}>
           <Text style={styles.numberText}>{index + 1}</Text>
         </View>
 
-        {/* Icon */}
-        <View style={styles.iconCircle}>
-          <Ionicons name={iconName} size={18} color={COLORS.roseMid} />
-        </View>
-
-        {/* Text */}
         <View style={styles.textContainer}>
           <Text
             style={[styles.title, { textAlign: isRTL ? 'right' : 'left' }]}
             numberOfLines={locked ? 1 : undefined}
           >
-            {locked ? '••••••••••••' : fix.title}
+            {locked ? '••••••••••••' : fix.text}
           </Text>
-          {!locked && (
-            <Text style={[styles.instruction, { textAlign: isRTL ? 'right' : 'left' }]}>
-              {fix.simple_instruction}
-            </Text>
-          )}
         </View>
 
         {locked && (
