@@ -2,6 +2,7 @@
   "expo": {
     "name": "AI Makeup Quick Fix",
     "slug": "ai-makeup-quick-fix",
+    "owner": "lookatmy",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.yourcompany.aimakeupquickfix",
+      "bundleIdentifier": "com.lookatmy.aimakeupquickfix",
       "infoPlist": {
         "NSCameraUsageDescription": "We need camera access to analyze your makeup",
         "NSPhotoLibraryUsageDescription": "We need photo library access to upload your makeup photo"
@@ -25,7 +26,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FDF5EF"
       },
-      "package": "com.yourcompany.aimakeupquickfix",
+      "package": "com.lookatmy.aimakeupquickfix",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
