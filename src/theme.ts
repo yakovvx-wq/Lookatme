@@ -1,28 +1,55 @@
 export const COLORS = {
-  roseDark: '#8B3D5A',
-  roseMid: '#C4607A',
-  roseLight: '#E8A0B0',
-  cream: '#FDF5EF',
-  peach: '#F7D4C0',
-  dark: '#2D1B2E',
-  muted: '#9A7080',
-  white: '#FFFFFF',
-  gold: '#D4A847',
-  goldLight: '#F5E08A',
-  success: '#6BAF9E',
-  successLight: '#A8D8CD',
-  cardBg: '#FFF8F4',
-  border: '#F0E0E8',
-  shadow: 'rgba(139, 61, 90, 0.12)',
+  // Backgrounds
+  dark: '#0F0F10',
+  card: '#1A1A1F',
+  cardHigh: '#222228',
+
+  // Brand palette
+  pink: '#FF5BA7',
+  orange: '#FF8A3D',
+  yellow: '#FFCB57',
+  green: '#7ED957',
+  teal: '#26C6DA',
+  purple: '#AA63F2',
+
+  // Text
+  white: '#F6F6F6',
+  muted: 'rgba(246,246,246,0.50)',
+  mutedLight: 'rgba(246,246,246,0.25)',
+
+  // Borders
+  border: 'rgba(255,255,255,0.09)',
+  borderBright: 'rgba(255,255,255,0.18)',
+
+  // Legacy aliases (keep existing screens compiling)
+  roseDark: '#CC3D85',
+  roseMid: '#FF5BA7',
+  roseLight: '#FF8AB5',
+  cream: '#0F0F10',
+  peach: '#1A1A1F',
+  gold: '#E5A830',
+  goldLight: '#FFCB57',
+  success: '#7ED957',
+  successLight: '#A6E870',
+  cardBg: '#1A1A1F',
+  shadow: 'rgba(255,91,167,0.25)',
 };
 
 export const GRADIENTS = {
-  warmCream: ['#FDF5EF', '#F7D4C0'] as const,
-  roseDeep: ['#8B3D5A', '#C4607A'] as const,
-  gold: ['#D4A847', '#F5E08A'] as const,
-  success: ['#6BAF9E', '#A8D8CD'] as const,
-  analyzing: ['#2D1B2E', '#4A2040'] as const,
+  primary: ['#FF5BA7', '#FF8A3D'] as const,
+  purplePink: ['#AA63F2', '#FF5BA7'] as const,
+  tealGreen: ['#26C6DA', '#7ED957'] as const,
+  darkBg: ['#0F0F10', '#16161C'] as const,
+
+  // Legacy
+  roseDeep: ['#FF5BA7', '#FF8A3D'] as const,
+  warmCream: ['#0F0F10', '#16161C'] as const,
+  analyzing: ['#0F0F10', '#0D0D14'] as const,
+  gold: ['#FFCB57', '#FF8A3D'] as const,
+  success: ['#7ED957', '#26C6DA'] as const,
 };
+
+export const RING_COLORS = ['#FF5BA7','#FF8A3D','#FFCB57','#7ED957','#26C6DA','#AA63F2'] as const;
 
 export const SPACING = {
   xs: 4,

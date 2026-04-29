@@ -6,7 +6,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "updates": {
       "url": "https://u.expo.dev/df9526d9-0a65-44bb-921a-ebc2acf44f03",
@@ -19,7 +19,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FDF5EF"
+      "backgroundColor": "#0F0F10"
     },
     "ios": {
       "supportsTablet": false,
@@ -32,7 +32,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FDF5EF"
+        "backgroundColor": "#0F0F10"
       },
       "package": "com.lookatmy.aimakeupquickfix",
       "permissions": [

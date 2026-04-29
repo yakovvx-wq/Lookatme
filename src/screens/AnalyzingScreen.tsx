@@ -8,19 +8,19 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
 import { useT } from '../i18n';
-import { COLORS, GRADIENTS, SPACING } from '../theme';
+import { COLORS, SPACING } from '../theme';
 import { analyzeMakeup } from '../services/analyzeMakeup';
+import LogoCircles from '../components/LogoCircles';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Analyzing'>;
 type Route = RouteProp<RootStackParamList, 'Analyzing'>;
 
-const MESSAGE_INTERVAL = 1100;
+const MESSAGE_INTERVAL = 1200;
 
 export default function AnalyzingScreen() {
   const navigation = useNavigation<Nav>();
@@ -33,37 +33,29 @@ export default function AnalyzingScreen() {
   const messages = t.analyzing.messages;
   const [msgIndex, setMsgIndex] = useState(0);
 
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const dotAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const imageScale = useRef(new Animated.Value(0.9)).current;
+  const imageOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.08, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-      ])
-    );
-    pulse.start();
+    // Fade image in
+    Animated.parallel([
+      Animated.timing(imageOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(imageScale, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
+    ]).start();
 
-    const dot = Animated.loop(
-      Animated.sequence([
-        Animated.timing(dotAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(dotAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-      ])
-    );
-    dot.start();
-
+    // Cycle messages with fade
     const msgTimer = setInterval(() => {
+      Animated.sequence([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start();
       setMsgIndex(i => (i + 1) % messages.length);
     }, MESSAGE_INTERVAL);
 
     let cancelled = false;
 
-    const stop = () => {
-      clearInterval(msgTimer);
-      pulse.stop();
-      dot.stop();
-    };
+    const stop = () => clearInterval(msgTimer);
 
     const run = async () => {
       try {
@@ -89,7 +81,7 @@ export default function AnalyzingScreen() {
         stop();
         const isTimeout = err instanceof Error && err.name === 'AbortError';
         const msg = isTimeout
-          ? (language === 'he' ? 'הבקשה לקחה יותר מדי זמן (timeout).' : 'Request timed out.')
+          ? (language === 'he' ? 'הבקשה לקחה יותר מדי זמן.' : 'Request timed out.')
           : (err instanceof Error ? err.message : String(err));
         Alert.alert(
           language === 'he' ? 'שגיאה' : 'Error',
@@ -108,114 +100,81 @@ export default function AnalyzingScreen() {
   }, []);
 
   return (
-    <LinearGradient colors={GRADIENTS.analyzing} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        {/* Image preview */}
+    <View style={styles.bg}>
+      <SafeAreaView style={styles.safe}>
+        {/* Top: image preview */}
         {imageUri && (
-          <Animated.View
-            style={[styles.imageWrapper, { transform: [{ scale: pulseAnim }] }]}
-          >
+          <Animated.View style={[styles.imageWrap, { opacity: imageOpacity, transform: [{ scale: imageScale }] }]}>
             <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
-            <View style={styles.imageOverlay} />
-            <View style={styles.scanLine} />
+            <View style={styles.imageVignette} />
           </Animated.View>
         )}
 
-        {/* Animated dots */}
-        <View style={styles.dotsRow}>
-          {[0, 1, 2].map(i => (
-            <Animated.View
-              key={i}
-              style={[
-                styles.dot,
-                {
-                  opacity: dotAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [i === 1 ? 0.4 : 0.2, i === 1 ? 1 : 0.6],
-                  }),
-                  transform: [
-                    {
-                      scale: dotAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [i === 1 ? 0.8 : 0.6, i === 1 ? 1.2 : 1],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          ))}
+        {/* Center: spinning logo */}
+        <View style={styles.logoWrap}>
+          <LogoCircles size={180} spin pulse />
         </View>
 
-        {/* Message */}
-        <Text style={styles.message}>{messages[msgIndex]}</Text>
-        <Text style={styles.subMessage}>
-          {language === 'en' ? 'AI Makeup Analysis' : 'ניתוח איפור AI'}
-        </Text>
+        {/* Bottom: text */}
+        <View style={styles.textWrap}>
+          <Animated.Text style={[styles.message, { opacity: fadeAnim }]}>
+            {messages[msgIndex]}
+          </Animated.Text>
+          <Text style={styles.sub}>
+            {language === 'he' ? 'ניתוח AI · לוקאטמי' : 'AI Analysis · Lookatme'}
+          </Text>
+        </View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  safeArea: {
+  bg: { flex: 1, backgroundColor: COLORS.dark },
+  safe: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xl,
-    paddingHorizontal: SPACING.xl,
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
   },
-  imageWrapper: {
-    width: 180,
-    height: 240,
+  imageWrap: {
+    width: 140,
+    height: 180,
     borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: COLORS.roseLight,
-    shadowColor: COLORS.roseMid,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,91,167,0.4)',
+    shadowColor: COLORS.pink,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 10,
   },
   image: { width: '100%', height: '100%' },
-  imageOverlay: {
+  imageVignette: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(139, 61, 90, 0.15)',
+    backgroundColor: 'rgba(15,15,16,0.2)',
   },
-  scanLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 2,
-    top: '50%',
-    backgroundColor: COLORS.roseLight,
-    opacity: 0.7,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
+  logoWrap: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.roseLight,
+  textWrap: {
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
   message: {
     fontSize: 20,
     fontWeight: '700',
     color: COLORS.white,
     textAlign: 'center',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
-  subMessage: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
-    letterSpacing: 2,
+  sub: {
+    fontSize: 12,
+    color: COLORS.mutedLight,
+    letterSpacing: 3,
     textTransform: 'uppercase',
   },
 });

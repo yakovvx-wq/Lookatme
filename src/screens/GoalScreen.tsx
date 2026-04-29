@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Goal, RootStackParamList } from '../types';
 import { useApp } from '../context/AppContext';
 import { useT, useRTL, rtlText } from '../i18n';
-import { COLORS, GRADIENTS, SPACING, RADIUS } from '../theme';
+import { COLORS, GRADIENTS, RING_COLORS, SPACING, RADIUS } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Goal'>;
 
@@ -41,213 +42,120 @@ export default function GoalScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons
-            name={isRTL ? 'chevron-forward' : 'chevron-back'}
-            size={24}
-            color={COLORS.dark}
-          />
-        </TouchableOpacity>
-        {/* Progress dots */}
-        <View style={styles.progress}>
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={styles.dot} />
+    <View style={styles.bg}>
+      <StatusBar barStyle="light-content" backgroundColor="#0F0F10" />
+      <SafeAreaView style={styles.safe}>
+        {/* Header */}
+        <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={COLORS.white} />
+          </TouchableOpacity>
+          <View style={styles.progressRow}>
+            <View style={[styles.dot, styles.dotActive]} />
+            <View style={styles.dot} />
+          </View>
+          <View style={styles.backBtn} />
         </View>
-        <View style={styles.backButton} />
-      </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={[styles.title, rtlText(isRTL)]}>{t.goal.title}</Text>
-        <Text style={[styles.subtitle, rtlText(isRTL)]}>{t.goal.subtitle}</Text>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <Text style={[styles.title, rtlText(isRTL)]}>{t.goal.title}</Text>
+          <Text style={[styles.subtitle, rtlText(isRTL)]}>{t.goal.subtitle}</Text>
 
-        <View style={styles.grid}>
-          {GOAL_OPTIONS.map((opt) => {
-            const label = t.goal[opt.id];
-            const isSelected = selected === opt.id;
-            return (
-              <TouchableOpacity
-                key={opt.id}
-                style={[styles.card, isSelected && styles.cardSelected]}
-                onPress={() => setSelected(opt.id)}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.emoji}>{opt.emoji}</Text>
-                <Text
-                  style={[
-                    styles.cardLabel,
-                    isSelected && styles.cardLabelSelected,
-                  ]}
+          <View style={styles.grid}>
+            {GOAL_OPTIONS.map((opt, idx) => {
+              const label = t.goal[opt.id];
+              const isSelected = selected === opt.id;
+              const accentColor = RING_COLORS[idx % RING_COLORS.length];
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.card, isSelected && { borderColor: accentColor, borderWidth: 1.5 }]}
+                  onPress={() => setSelected(opt.id)}
+                  activeOpacity={0.75}
                 >
-                  {label}
-                </Text>
-                {isSelected && (
-                  <View style={styles.checkCircle}>
-                    <Ionicons name="checkmark" size={12} color={COLORS.white} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
+                  <Text style={styles.emoji}>{opt.emoji}</Text>
+                  <Text style={[styles.cardLabel, isSelected && { color: accentColor }]}>{label}</Text>
+                  {isSelected && (
+                    <View style={[styles.checkCircle, { backgroundColor: accentColor }]}>
+                      <Ionicons name="checkmark" size={11} color={COLORS.white} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
 
-      {/* CTA */}
-      <View style={styles.bottom}>
-        <TouchableOpacity
-          style={[styles.nextButton, !selected && styles.nextButtonDisabled]}
-          onPress={handleNext}
-          disabled={!selected}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={selected ? GRADIENTS.roseDeep : [COLORS.border, COLORS.border]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.nextGradient}
+        <View style={styles.bottom}>
+          <TouchableOpacity
+            style={[styles.nextBtn, !selected && styles.nextBtnDisabled]}
+            onPress={handleNext}
+            disabled={!selected}
+            activeOpacity={0.85}
           >
-            <Text style={[styles.nextText, !selected && styles.nextTextDisabled]}>
-              {t.goal.next}
-            </Text>
-            <Ionicons
-              name={isRTL ? 'arrow-back' : 'arrow-forward'}
-              size={20}
-              color={selected ? COLORS.white : COLORS.muted}
-            />
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+            <LinearGradient
+              colors={selected ? GRADIENTS.primary : [COLORS.card, COLORS.card]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.nextGradient}
+            >
+              <Text style={[styles.nextText, !selected && styles.nextTextOff]}>{t.goal.next}</Text>
+              <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={20} color={selected ? COLORS.white : COLORS.muted} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.cream },
+  bg: { flex: 1, backgroundColor: COLORS.dark },
+  safe: { flex: 1 },
   header: {
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.sm,
     paddingBottom: SPACING.md,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progress: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.border,
-  },
-  dotActive: {
-    backgroundColor: COLORS.roseMid,
-    width: 24,
-  },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  progressRow: { flex: 1, flexDirection: 'row', justifyContent: 'center', gap: SPACING.sm },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
+  dotActive: { backgroundColor: COLORS.pink, width: 24 },
   scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.dark,
-    marginBottom: SPACING.xs,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.muted,
-    marginBottom: SPACING.xl,
-    lineHeight: 20,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
+  scrollContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg },
+  title: { fontSize: 28, fontWeight: '800', color: COLORS.white, marginBottom: SPACING.xs, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: COLORS.muted, marginBottom: SPACING.xl, lineHeight: 20 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
   card: {
     width: '47%',
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.card,
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: COLORS.border,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2,
     position: 'relative',
   },
-  cardSelected: {
-    borderColor: COLORS.roseMid,
-    backgroundColor: '#FFF0F4',
-  },
-  emoji: {
-    fontSize: 36,
-    marginBottom: SPACING.sm,
-  },
-  cardLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.dark,
-    textAlign: 'center',
-  },
-  cardLabelSelected: {
-    color: COLORS.roseMid,
-  },
+  emoji: { fontSize: 36, marginBottom: SPACING.sm },
+  cardLabel: { fontSize: 15, fontWeight: '600', color: COLORS.white, textAlign: 'center' },
   checkCircle: {
     position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.roseMid,
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: SPACING.sm, right: SPACING.sm,
+    width: 20, height: 20, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
-  bottom: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xl,
-    paddingTop: SPACING.sm,
-  },
-  nextButton: {
+  bottom: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl, paddingTop: SPACING.sm },
+  nextBtn: {
     borderRadius: RADIUS.round,
     overflow: 'hidden',
+    shadowColor: COLORS.pink,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  nextButtonDisabled: {
-    opacity: 0.6,
-  },
-  nextGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.md + 2,
-    gap: SPACING.sm,
-  },
-  nextText: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  nextTextDisabled: {
-    color: COLORS.muted,
-  },
+  nextBtnDisabled: { shadowOpacity: 0, elevation: 0 },
+  nextGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: SPACING.md + 2, gap: SPACING.sm },
+  nextText: { color: COLORS.white, fontSize: 17, fontWeight: '700' },
+  nextTextOff: { color: COLORS.muted },
 });

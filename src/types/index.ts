@@ -14,10 +14,13 @@ export interface Zone {
 export interface Fix {
   area: string;
   title: string;
-  compliment: string;
-  recommendation: string;
-  location_explanation: string;
-  zone: Zone;
+  compliment?: string;
+  recommendation?: string;
+  location_explanation?: string;
+  zone?: Zone;
+  // legacy mock fields
+  simple_instruction?: string;
+  marker_position?: { x: number; y: number };
 }
 
 export interface AnalysisResult {
