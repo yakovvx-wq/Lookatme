@@ -126,7 +126,7 @@ ${isRescan ? 'זוהי תמונה שניה לאחר שהמשתמשת ביצעה 
 - marker_position: x,y כאחוזים של התמונה (0-100). מקמי בדיוק על האזור הספציפי
 - marker_color: בחרי מהרשימה לפי סדר: ${MARKER_COLORS.join(', ')}
 
-כמות המלצות: 0-5 לפי הצורך האמיתי. אם האיפור מושלם — החזירי 0. אל תמציאי תיקונים.
+כמות המלצות: תמיד לפחות 1, עד 5. גם אם האיפור מצוין — תמיד יש משהו שיכול להיות עוד יותר טוב. חפשי את הדבר הכי קטן שאפשר לשפר ותני עליו המלצה.
 הציון: 1-10 (7-8 = טוב, 8.5-9.5 = מעולה, 10 = מושלם).
 
 החזר JSON בלבד (ללא שום טקסט אחר):
@@ -179,7 +179,7 @@ Rules:
 - marker_position: x,y as percentage of image (0-100). Place precisely on the specific area
 - marker_color: choose from this list in order: ${MARKER_COLORS.join(', ')}
 
-Number of recommendations: 0-5 based on genuine need. If makeup is perfect — return 0. Don't invent fixes.
+Number of recommendations: always at least 1, up to 5. Even excellent makeup has something that could be elevated further. Find the smallest detail to improve and recommend it.
 Score: 1-10 (7-8 = good, 8.5-9.5 = excellent, 10 = flawless).
 
 Return ONLY valid JSON (no other text):
@@ -263,6 +263,36 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
         y: Math.max(5, Math.min(95, Number(rec.marker_position?.y ?? 50))),
       },
     }));
+
+    // Safety net: if AI returned 0 recs despite instructions, ask for 1 more
+    if (result.recommendations.length === 0 && result.score > 0) {
+      const followUp = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        response_format: { type: 'json_object' },
+        max_tokens: 600,
+        messages: [
+          {
+            role: 'system',
+            content: language === 'he'
+              ? `את מאפרת מקצועית. האיפור נראה טוב (ציון ${result.score}/10) אבל תמיד יש משהו קטן לשפר. תני המלצה אחת קטנה ומועילה. החזירי JSON בלבד:\n{"area":"שם האזור","title":"כותרת","compliment":"מחמאה","recommendation":"2+ משפטים","quick_action":"3-5 מילים","marker_color":"#FF5BA7","marker_position":{"x":50,"y":50}}`
+              : `You are a makeup expert. The makeup looks good (score ${result.score}/10) but there is always one small thing to elevate. Give one small helpful tip. Return ONLY JSON:\n{"area":"area","title":"title","compliment":"compliment","recommendation":"2+ sentences","quick_action":"3-5 words","marker_color":"#FF5BA7","marker_position":{"x":50,"y":50}}`,
+          },
+        ],
+      });
+      try {
+        const extra = JSON.parse(followUp.choices[0].message.content ?? '{}');
+        if (extra.title) {
+          result.recommendations = [{
+            ...extra,
+            marker_color: MARKER_COLORS[0],
+            marker_position: {
+              x: Math.max(5, Math.min(95, Number(extra.marker_position?.x ?? 50))),
+              y: Math.max(5, Math.min(95, Number(extra.marker_position?.y ?? 50))),
+            },
+          }];
+        }
+      } catch { /* ignore parse error */ }
+    }
 
     res.json(result);
   } catch (err) {

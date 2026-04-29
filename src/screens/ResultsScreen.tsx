@@ -71,46 +71,52 @@ export default function ResultsScreen() {
           </View>
 
           {/* Recommendations */}
-          {recs.length > 0 && (
-            <View style={styles.fixesSection}>
-              <Text style={[styles.fixesTitle, rtlText(isRTL)]}>{t.results.fixes}</Text>
+          <View style={styles.fixesSection}>
+            {recs.length === 0 ? (
+              <View style={styles.perfectWrap}>
+                <Text style={styles.perfectEmoji}>✨</Text>
+                <Text style={[styles.perfectText, rtlText(isRTL)]}>
+                  {isRTL ? 'האיפור נראה מעולה — אין מה לתקן!' : 'Your makeup looks flawless — nothing to fix!'}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={[styles.fixesTitle, rtlText(isRTL)]}>{t.results.fixes}</Text>
 
-              {recs[0] != null && (
                 <FixCard rec={recs[0]} index={0} locked={false} isRTL={isRTL} />
-              )}
 
-              {recs.slice(1).map((rec, i) =>
-                isPro ? (
-                  <FixCard key={i} rec={rec} index={i + 1} isRTL={isRTL} />
-                ) : (
-                  <FixCard key={i} rec={rec} index={i + 1} locked onUnlock={handleUnlock} isRTL={isRTL} />
-                )
-              )}
+                {recs.slice(1).map((rec, i) =>
+                  isPro ? (
+                    <FixCard key={i} rec={rec} index={i + 1} isRTL={isRTL} />
+                  ) : (
+                    <FixCard key={i} rec={rec} index={i + 1} locked onUnlock={handleUnlock} isRTL={isRTL} />
+                  )
+                )}
 
-              {/* Paywall banner */}
-              {!isPro && recs.length > 1 && (
-                <TouchableOpacity style={styles.paywallBanner} onPress={handleUnlock} activeOpacity={0.85}>
-                  <LinearGradient
-                    colors={GRADIENTS.primary}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={styles.paywallGradient}
-                  >
-                    <View style={styles.paywallRow}>
-                      <Ionicons name="lock-open-outline" size={22} color={COLORS.white} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.paywallTitle}>{t.results.unlockTitle}</Text>
-                        <Text style={styles.paywallSub}>{t.results.unlockSubtitle}</Text>
+                {!isPro && recs.length > 1 && (
+                  <TouchableOpacity style={styles.paywallBanner} onPress={handleUnlock} activeOpacity={0.85}>
+                    <LinearGradient
+                      colors={GRADIENTS.primary}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                      style={styles.paywallGradient}
+                    >
+                      <View style={styles.paywallRow}>
+                        <Ionicons name="lock-open-outline" size={22} color={COLORS.white} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.paywallTitle}>{t.results.unlockTitle}</Text>
+                          <Text style={styles.paywallSub}>{t.results.unlockSubtitle}</Text>
+                        </View>
                       </View>
-                    </View>
-                    <View style={styles.paywallCta}>
-                      <Text style={styles.paywallCtaText}>{t.results.upgradeCta}</Text>
-                      <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={14} color={COLORS.dark} />
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
+                      <View style={styles.paywallCta}>
+                        <Text style={styles.paywallCtaText}>{t.results.upgradeCta}</Text>
+                        <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={14} color={COLORS.dark} />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
 
           {/* Rescan */}
           <View style={styles.rescanSection}>
@@ -181,6 +187,9 @@ const styles = StyleSheet.create({
     gap: SPACING.xs, alignSelf: 'flex-start',
   },
   paywallCtaText: { color: COLORS.dark, fontWeight: '700', fontSize: 13 },
+  perfectWrap: { alignItems: 'center', gap: SPACING.sm, paddingVertical: SPACING.lg },
+  perfectEmoji: { fontSize: 32 },
+  perfectText: { fontSize: 15, color: COLORS.muted, textAlign: 'center', lineHeight: 22 },
   rescanSection: { paddingHorizontal: SPACING.lg },
   rescanBtn: {
     borderRadius: RADIUS.round, overflow: 'hidden',
