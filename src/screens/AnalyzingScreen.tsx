@@ -27,7 +27,7 @@ export default function AnalyzingScreen() {
   const route = useRoute<Route>();
   const { isRescan } = route.params;
 
-  const { imageUri, goal, style, setResult, language } = useApp();
+  const { imageUri, goal, style, setResult, language, previousResult } = useApp();
   const t = useT();
 
   const messages = t.analyzing.messages;
@@ -64,7 +64,10 @@ export default function AnalyzingScreen() {
           return;
         }
 
-        const result = await analyzeMakeup(imageUri, goal, style, language);
+        const result = await analyzeMakeup(
+          imageUri, goal, style, language,
+          isRescan ? previousResult ?? undefined : undefined
+        );
 
         if (cancelled) return;
         stop();
@@ -72,7 +75,7 @@ export default function AnalyzingScreen() {
         setResult({
           score: result.score,
           summary: result.summary,
-          fixes: result.fixes,
+          recommendations: result.recommendations,
           face_image: result.face_image,
         });
         navigation.replace(isRescan ? 'Rescan' : 'Results');

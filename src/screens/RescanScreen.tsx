@@ -105,17 +105,17 @@ export default function RescanScreen() {
           )}
 
           {/* Remaining */}
-          {result.fixes.length > 0 && (
+          {result.recommendations.length > 0 && (
             <View style={styles.remainingCard}>
               <Text style={[styles.remainingTitle, rtlText(isRTL)]}>
-                {result.fixes.length === 1
+                {result.recommendations.length === 1
                   ? (isRTL ? 'עוד תיקון קטן:' : 'One more small fix:')
                   : (isRTL ? 'עוד כמה תיקונים:' : 'A few more tweaks:')}
               </Text>
-              {result.fixes.map((fix, i) => (
+              {result.recommendations.map((rec, i) => (
                 <View key={i} style={[styles.remainingItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                  <View style={styles.dot} />
-                  <Text style={[styles.remainingText, rtlText(isRTL)]}>{fix.recommendation}</Text>
+                  <View style={[styles.dot, { backgroundColor: rec.marker_color }]} />
+                  <Text style={[styles.remainingText, rtlText(isRTL)]}>{rec.quick_action} — {rec.recommendation}</Text>
                 </View>
               ))}
             </View>

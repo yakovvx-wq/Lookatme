@@ -1,18 +1,18 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Fix } from '../types';
-import { COLORS, RING_COLORS, SPACING, RADIUS } from '../theme';
+import { Recommendation } from '../types';
+import { COLORS, SPACING, RADIUS } from '../theme';
 
 interface FixCardProps {
-  fix: Fix;
+  rec: Recommendation;
   index: number;
   locked?: boolean;
   onUnlock?: () => void;
   isRTL?: boolean;
 }
 
-export default function FixCard({ fix, index, locked = false, onUnlock, isRTL }: FixCardProps) {
+export default function FixCard({ rec, index, locked = false, onUnlock, isRTL }: FixCardProps) {
   const slideAnim = useRef(new Animated.Value(24)).current;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
 
@@ -23,28 +23,37 @@ export default function FixCard({ fix, index, locked = false, onUnlock, isRTL }:
     ]).start();
   }, []);
 
-  const accentColor = RING_COLORS[index % RING_COLORS.length];
+  const accentColor = rec.marker_color;
   const rowDir = isRTL ? 'row-reverse' : 'row';
 
   return (
     <Animated.View style={[styles.card, locked && styles.cardLocked, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
       <View style={[styles.row, { flexDirection: rowDir }]}>
-        <View style={[styles.badge, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
-          <Text style={[styles.badgeNum, { color: accentColor }]}>{index + 1}</Text>
+        {/* Colored dot matching the image marker */}
+        <View style={[styles.badge, { backgroundColor: accentColor, shadowColor: accentColor }]}>
+          <Text style={styles.badgeNum}>{index + 1}</Text>
         </View>
 
         <View style={styles.content}>
           <Text style={[styles.title, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={locked ? 1 : undefined}>
-            {locked ? '••••••••••••' : fix.title}
+            {locked ? '••••••••••••' : rec.title}
           </Text>
           {!locked && (
             <>
-              <Text style={[styles.compliment, { textAlign: isRTL ? 'right' : 'left', color: accentColor }]}>
-                {fix.compliment}
-              </Text>
+              {rec.compliment ? (
+                <Text style={[styles.compliment, { textAlign: isRTL ? 'right' : 'left', color: accentColor }]}>
+                  {rec.compliment}
+                </Text>
+              ) : null}
               <Text style={[styles.recommendation, { textAlign: isRTL ? 'right' : 'left' }]}>
-                {fix.recommendation}
+                {rec.recommendation}
               </Text>
+              <View style={[styles.quickRow, { flexDirection: rowDir }]}>
+                <View style={[styles.quickPill, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
+                  <Ionicons name="flash-outline" size={11} color={accentColor} />
+                  <Text style={[styles.quickText, { color: accentColor }]}>{rec.quick_action}</Text>
+                </View>
+              </View>
             </>
           )}
         </View>
@@ -78,20 +87,37 @@ const styles = StyleSheet.create({
   cardLocked: { opacity: 0.55 },
   row: { alignItems: 'flex-start', gap: SPACING.sm },
   badge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    marginTop: 1,
+    marginTop: 2,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.25)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  badgeNum: { fontWeight: '800', fontSize: 14 },
+  badgeNum: { color: '#fff', fontWeight: '800', fontSize: 13 },
   content: { flex: 1, gap: 5 },
   title: { fontSize: 15, fontWeight: '700', color: COLORS.white },
-  compliment: { fontSize: 13, lineHeight: 19 },
+  compliment: { fontSize: 13, lineHeight: 19, fontWeight: '500' },
   recommendation: { fontSize: 13, color: COLORS.muted, lineHeight: 19 },
+  quickRow: { marginTop: 4 },
+  quickPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: RADIUS.round,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+  },
+  quickText: { fontSize: 11, fontWeight: '700' },
   lockBtn: { padding: SPACING.xs },
   lockedOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,15,16,0.45)' },
 });

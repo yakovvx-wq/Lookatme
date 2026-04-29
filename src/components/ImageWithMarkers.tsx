@@ -1,94 +1,65 @@
-import React, { useState } from 'react';
-import { View, Image, Text, StyleSheet, LayoutChangeEvent } from 'react-native';
-import { Fix } from '../types';
+import React from 'react';
+import { View, Image, Text, StyleSheet } from 'react-native';
+import { Recommendation } from '../types';
 import { COLORS } from '../theme';
 
 interface ImageWithMarkersProps {
   imageUri: string;
   faceImage?: string;
-  fixes: Fix[];
+  recommendations: Recommendation[];
   showAll?: boolean;
 }
 
-const ZONE_COLORS = ['#E8A0BF', '#B784A7', '#C9A0DC', '#9B72AA', '#DBA1C3'];
+const DOT_SIZE = 26;
 
 export default function ImageWithMarkers({
   imageUri,
   faceImage,
-  fixes,
+  recommendations,
   showAll = false,
 }: ImageWithMarkersProps) {
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-
-  const handleLayout = (e: LayoutChangeEvent) => {
-    const { width, height } = e.nativeEvent.layout;
-    setContainerSize({ width, height });
-  };
-
   const displayUri = faceImage ?? imageUri;
-  const visibleFixes = showAll ? fixes : fixes.slice(0, 1);
-  const lockedFixes = showAll ? [] : fixes.slice(1);
+  const visibleRecs = showAll ? recommendations : recommendations.slice(0, 1);
+  const lockedRecs = showAll ? [] : recommendations.slice(1);
 
   return (
-    <View style={styles.container} onLayout={handleLayout}>
+    <View style={styles.container}>
       <Image source={{ uri: displayUri }} style={styles.image} resizeMode="cover" />
 
-      {containerSize.width > 0 && (
-        <View style={StyleSheet.absoluteFillObject as object} pointerEvents="none">
-          {/* Visible zone overlays */}
-          {visibleFixes.map((fix, i) => {
-            if (!fix.zone) return null;
-            const { x, y, w, h, label, number } = fix.zone;
-            const color = ZONE_COLORS[i % ZONE_COLORS.length];
-            return (
-              <View
-                key={i}
-                style={[
-                  styles.zone,
-                  {
-                    left: `${x}%` as any,
-                    top: `${y}%` as any,
-                    width: `${w}%` as any,
-                    height: `${h}%` as any,
-                    borderColor: color,
-                    backgroundColor: color + '33',
-                  },
-                ]}
-              >
-                <View style={[styles.zoneBadge, { backgroundColor: color }]}>
-                  <Text style={styles.zoneBadgeText}>{number}</Text>
-                </View>
-                <Text style={[styles.zoneLabel, { color }]}>{label}</Text>
-              </View>
-            );
-          })}
+      <View style={StyleSheet.absoluteFillObject as object} pointerEvents="none">
+        {visibleRecs.map((rec, i) => (
+          <View
+            key={i}
+            style={[
+              styles.dot,
+              {
+                left: `${rec.marker_position.x}%` as any,
+                top: `${rec.marker_position.y}%` as any,
+                backgroundColor: rec.marker_color,
+                shadowColor: rec.marker_color,
+              },
+            ]}
+          >
+            <Text style={styles.dotNum}>{i + 1}</Text>
+          </View>
+        ))}
 
-          {/* Locked zone overlays (blurred) */}
-          {lockedFixes.map((fix, i) => {
-            if (!fix.zone) return null;
-            const { x, y, w, h, number } = fix.zone;
-            return (
-              <View
-                key={`locked-${i}`}
-                style={[
-                  styles.zone,
-                  styles.zoneLocked,
-                  {
-                    left: `${x}%` as any,
-                    top: `${y}%` as any,
-                    width: `${w}%` as any,
-                    height: `${h}%` as any,
-                  },
-                ]}
-              >
-                <View style={[styles.zoneBadge, { backgroundColor: COLORS.muted }]}>
-                  <Text style={styles.zoneBadgeText}>{number}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
+        {lockedRecs.map((rec, i) => (
+          <View
+            key={`locked-${i}`}
+            style={[
+              styles.dot,
+              styles.dotLocked,
+              {
+                left: `${rec.marker_position.x}%` as any,
+                top: `${rec.marker_position.y}%` as any,
+              },
+            ]}
+          >
+            <Text style={styles.dotNum}>{visibleRecs.length + i + 1}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -99,44 +70,36 @@ const styles = StyleSheet.create({
     aspectRatio: 3 / 4,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#E8D5DC',
+    backgroundColor: COLORS.card,
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  zone: {
+  dot: {
     position: 'absolute',
-    borderWidth: 2,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 4,
-    gap: 4,
-  },
-  zoneLocked: {
-    borderColor: COLORS.muted,
-    backgroundColor: 'rgba(150,150,150,0.15)',
-    opacity: 0.6,
-  },
-  zoneBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: -(DOT_SIZE / 2),
+    marginTop: -(DOT_SIZE / 2),
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  zoneBadgeText: {
+  dotLocked: {
+    backgroundColor: COLORS.muted,
+    shadowColor: 'transparent',
+    opacity: 0.5,
+  },
+  dotNum: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  zoneLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    marginTop: 3,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontWeight: '800',
   },
 });

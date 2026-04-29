@@ -24,11 +24,13 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'Results'>;
 
 export default function ResultsScreen() {
   const navigation = useNavigation<Nav>();
-  const { result, imageUri, isPro, startRescan } = useApp();
+  const { result, imageUri, isPro } = useApp();
   const t = useT();
   const isRTL = useRTL();
 
   if (!result || !imageUri) return null;
+
+  const recs = result.recommendations ?? [];
 
   const handleRescan = () => {
     if (!isPro) { navigation.navigate('Paywall'); return; }
@@ -58,55 +60,57 @@ export default function ResultsScreen() {
             <Text style={[styles.summary, rtlText(isRTL)]}>{result.summary ?? ''}</Text>
           </View>
 
-          {/* Face with markers */}
+          {/* Face with dot markers */}
           <View style={styles.imageSection}>
             <ImageWithMarkers
               imageUri={imageUri}
               faceImage={result.face_image}
-              fixes={result.fixes ?? []}
+              recommendations={recs}
               showAll={isPro}
             />
           </View>
 
-          {/* Fixes */}
-          <View style={styles.fixesSection}>
-            <Text style={[styles.fixesTitle, rtlText(isRTL)]}>{t.results.fixes}</Text>
+          {/* Recommendations */}
+          {recs.length > 0 && (
+            <View style={styles.fixesSection}>
+              <Text style={[styles.fixesTitle, rtlText(isRTL)]}>{t.results.fixes}</Text>
 
-            {result.fixes?.[0] != null && (
-              <FixCard fix={result.fixes[0]} index={0} locked={false} isRTL={isRTL} />
-            )}
+              {recs[0] != null && (
+                <FixCard rec={recs[0]} index={0} locked={false} isRTL={isRTL} />
+              )}
 
-            {(result.fixes ?? []).slice(1).map((fix, i) =>
-              isPro ? (
-                <FixCard key={i} fix={fix} index={i + 1} isRTL={isRTL} />
-              ) : (
-                <FixCard key={i} fix={fix} index={i + 1} locked onUnlock={handleUnlock} isRTL={isRTL} />
-              )
-            )}
+              {recs.slice(1).map((rec, i) =>
+                isPro ? (
+                  <FixCard key={i} rec={rec} index={i + 1} isRTL={isRTL} />
+                ) : (
+                  <FixCard key={i} rec={rec} index={i + 1} locked onUnlock={handleUnlock} isRTL={isRTL} />
+                )
+              )}
 
-            {/* Paywall banner */}
-            {!isPro && (result.fixes?.length ?? 0) > 1 && (
-              <TouchableOpacity style={styles.paywallBanner} onPress={handleUnlock} activeOpacity={0.85}>
-                <LinearGradient
-                  colors={GRADIENTS.primary}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={styles.paywallGradient}
-                >
-                  <View style={styles.paywallRow}>
-                    <Ionicons name="lock-open-outline" size={22} color={COLORS.white} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.paywallTitle}>{t.results.unlockTitle}</Text>
-                      <Text style={styles.paywallSub}>{t.results.unlockSubtitle}</Text>
+              {/* Paywall banner */}
+              {!isPro && recs.length > 1 && (
+                <TouchableOpacity style={styles.paywallBanner} onPress={handleUnlock} activeOpacity={0.85}>
+                  <LinearGradient
+                    colors={GRADIENTS.primary}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={styles.paywallGradient}
+                  >
+                    <View style={styles.paywallRow}>
+                      <Ionicons name="lock-open-outline" size={22} color={COLORS.white} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.paywallTitle}>{t.results.unlockTitle}</Text>
+                        <Text style={styles.paywallSub}>{t.results.unlockSubtitle}</Text>
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.paywallCta}>
-                    <Text style={styles.paywallCtaText}>{t.results.upgradeCta}</Text>
-                    <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={14} color={COLORS.dark} />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-          </View>
+                    <View style={styles.paywallCta}>
+                      <Text style={styles.paywallCtaText}>{t.results.upgradeCta}</Text>
+                      <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={14} color={COLORS.dark} />
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {/* Rescan */}
           <View style={styles.rescanSection}>

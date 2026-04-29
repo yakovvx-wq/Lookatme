@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import OpenAI from 'openai';
-import sharp from 'sharp';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,165 +16,188 @@ const upload = multer({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const GOAL_LABELS: Record<string, string> = {
-  daily: "לוק יומיומי קז'ואל",
-  work: 'לוק עבודה מקצועי',
-  date: 'לוק דייט רומנטי',
-  event: 'לוק אירוע מיוחד',
-  photo: 'לוק צילומים',
+const GOAL_LABELS: Record<string, Record<string, string>> = {
+  daily: {
+    en: 'everyday casual look',
+    he: "לוק יומיומי קז'ואל",
+  },
+  work: {
+    en: 'professional work look',
+    he: 'לוק עבודה מקצועי',
+  },
+  date: {
+    en: 'romantic date night look',
+    he: 'לוק דייט רומנטי',
+  },
+  event: {
+    en: 'special event or party look',
+    he: 'לוק אירוע מיוחד',
+  },
+  photo: {
+    en: 'photoshoot or camera-ready look',
+    he: 'לוק צילומים',
+  },
 };
 
-const STYLE_LABELS: Record<string, string> = {
-  natural: 'נטורל מינימלי',
-  clean: 'נקי ומסודר',
-  softGlam: 'גלאם עדין',
-  fullGlam: 'גלאם מלא',
-  dramatic: 'דרמטי',
-  bold: 'בולד',
+const STYLE_LABELS: Record<string, Record<string, string>> = {
+  natural: {
+    en: 'natural minimal',
+    he: 'נטורל מינימלי',
+  },
+  clean: {
+    en: 'clean and polished',
+    he: 'נקי ומסודר',
+  },
+  softGlam: {
+    en: 'soft glam',
+    he: 'גלאם עדין',
+  },
+  fullGlam: {
+    en: 'full glam',
+    he: 'גלאם מלא',
+  },
+  dramatic: {
+    en: 'dramatic',
+    he: 'דרמטי',
+  },
+  bold: {
+    en: 'bold statement',
+    he: 'בולד',
+  },
 };
 
-// Zone definitions on a cropped face image (percentages 0-100)
-const ZONES: Record<string, { x: number; y: number; w: number; h: number; label: string; number: number }> = {
-  brows: { x: 5,  y: 8,  w: 90, h: 18, label: 'גבות',    number: 1 },
-  eyes:  { x: 5,  y: 25, w: 90, h: 22, label: 'עיניים',  number: 2 },
-  blush: { x: 2,  y: 45, w: 96, h: 18, label: 'סומק',    number: 3 },
-  base:  { x: 15, y: 35, w: 70, h: 32, label: 'בסיס',    number: 4 },
-  lips:  { x: 18, y: 65, w: 64, h: 20, label: 'שפתיים',  number: 5 },
+// Brand marker colors (cycled by recommendation index)
+const MARKER_COLORS = ['#FF5BA7', '#FF8A3D', '#FFCB57', '#7ED957', '#26C6DA', '#AA63F2'];
+
+// Goal-specific guidance for the prompt
+const GOAL_GUIDANCE: Record<string, string> = {
+  daily: 'Focus on longevity, naturalness, and ease. Avoid recommending heavy or complex techniques.',
+  work: 'Focus on polished, professional finish. Avoid anything too bold, glittery, or distracting.',
+  date: 'Focus on allure, glow, and romantic details. Soft shimmer, defined eyes, and flattering lip are relevant.',
+  event: 'Higher intensity and drama are appropriate. Full coverage, defined features, and longevity matter.',
+  photo: 'Camera-ready means avoiding flat coverage, adding dimension, and ensuring colors pop on camera. Contouring and highlight placement are key.',
 };
 
-interface Landmarks {
-  left_eye: { x: number; y: number };
-  right_eye: { x: number; y: number };
-  left_brow: { x: number; y: number };
-  right_brow: { x: number; y: number };
-  lips: { x: number; y: number };
-  left_cheek: { x: number; y: number };
-  right_cheek: { x: number; y: number };
-  nose: { x: number; y: number };
-}
-
-const DEFAULT_LANDMARKS: Landmarks = {
-  left_eye:    { x: 33, y: 38 },
-  right_eye:   { x: 67, y: 38 },
-  left_brow:   { x: 33, y: 28 },
-  right_brow:  { x: 67, y: 28 },
-  lips:        { x: 50, y: 68 },
-  left_cheek:  { x: 22, y: 55 },
-  right_cheek: { x: 78, y: 55 },
-  nose:        { x: 50, y: 52 },
+const STYLE_GUIDANCE: Record<string, string> = {
+  natural: 'Soft corrections only. No heavy products. Skincare-finish base, tinted brow, light mascara.',
+  clean: 'Precise lines, even base, groomed brows. Avoid messiness or bleeding edges.',
+  softGlam: 'Blended shadows, subtle highlight, defined lashes. Transition from day to evening.',
+  fullGlam: 'Full coverage base, bold eye, defined contour and blush, strong lip.',
+  dramatic: 'Intense color, sharp lines, heavy lashes. Bold choices are intentional — only flag real mistakes.',
+  bold: 'Expressive, maximalist. Wild colors or textures are intentional — only flag unintentional errors.',
 };
 
-async function detectLandmarks(base64: string, mimeType: string): Promise<Landmarks> {
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      response_format: { type: 'json_object' },
-      max_tokens: 300,
-      messages: [
-        {
-          role: 'system',
-          content: `Detect facial landmarks in the image. Return x,y as percentages (0-100), where x=left→right, y=top→bottom.
-Return ONLY this JSON (no extra text):
-{"left_eye":{"x":n,"y":n},"right_eye":{"x":n,"y":n},"left_brow":{"x":n,"y":n},"right_brow":{"x":n,"y":n},"lips":{"x":n,"y":n},"left_cheek":{"x":n,"y":n},"right_cheek":{"x":n,"y":n},"nose":{"x":n,"y":n}}
-If no face is detected, return {"no_face":true}.`,
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Detect facial landmarks.' },
-            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'low' } },
-          ],
-        },
-      ],
-    });
-    const raw = JSON.parse(response.choices[0].message.content ?? '{}');
-    if (raw.no_face) return DEFAULT_LANDMARKS;
-    return { ...DEFAULT_LANDMARKS, ...raw };
-  } catch {
-    return DEFAULT_LANDMARKS;
-  }
-}
+function buildSystemPrompt(goal: string, style: string, lang: string, isRescan: boolean): string {
+  const goalLabel = lang === 'he' ? (GOAL_LABELS[goal]?.he ?? goal) : (GOAL_LABELS[goal]?.en ?? goal);
+  const styleLabel = lang === 'he' ? (STYLE_LABELS[style]?.he ?? style) : (STYLE_LABELS[style]?.en ?? style);
+  const goalGuide = GOAL_GUIDANCE[goal] ?? '';
+  const styleGuide = STYLE_GUIDANCE[style] ?? '';
 
-async function cropFace(buffer: Buffer, landmarks: Landmarks): Promise<string> {
-  try {
-    const meta = await sharp(buffer).metadata();
-    const W = meta.width ?? 1000;
-    const H = meta.height ?? 1000;
+  if (lang === 'he') {
+    return `את מומחית איפור מקצועית שמנתחת תמונות איפור ונותנת המלצות מדויקות.
 
-    const pts = [
-      landmarks.left_brow, landmarks.right_brow,
-      landmarks.left_eye, landmarks.right_eye,
-      landmarks.nose, landmarks.lips,
-      landmarks.left_cheek, landmarks.right_cheek,
-    ];
+מטרת הלוק: ${goalLabel}
+סגנון רצוי: ${styleLabel}
 
-    const xs = pts.map(p => p.x);
-    const ys = pts.map(p => p.y);
+הנחיות לניתוח עבור המטרה: ${goalGuide}
+הנחיות לניתוח עבור הסגנון: ${styleGuide}
 
-    const pad = 15; // % padding
-    const left   = Math.max(0, Math.min(...xs) - pad) / 100;
-    const top    = Math.max(0, Math.min(...ys) - pad) / 100;
-    const right  = Math.min(100, Math.max(...xs) + pad) / 100;
-    const bottom = Math.min(100, Math.max(...ys) + pad) / 100;
+אזורי הפנים שאת מנתחת (10 אזורים):
+1. בסיס ופריימר (coverage, finish, undertone)
+2. קונסילר (עיגולים, כתמים, covering)
+3. צללית עיניים (blend, transitions, colors)
+4. אייליינר (precision, wings, symmetry)
+5. ריסים ומסקרה (length, volume, curl, clumping)
+6. גבות (shape, fill, symmetry, arch)
+7. סומק (placement, blending, intensity)
+8. ברונזר וקונטור (placement, blending, dimension)
+9. שפתיים (color, precision, liner, fullness)
+10. הרמוניה ואיזון כללי (color harmony, proportions)
 
-    const cropLeft   = Math.round(left * W);
-    const cropTop    = Math.round(top * H);
-    const cropWidth  = Math.round((right - left) * W);
-    const cropHeight = Math.round((bottom - top) * H);
+${isRescan ? 'זוהי תמונה שניה לאחר שהמשתמשת ביצעה תיקונים. השווי לניתוח הקודם וציין שיפורים.' : ''}
 
-    const cropped = await sharp(buffer)
-      .extract({ left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight })
-      .resize({ width: 600, withoutEnlargement: true })
-      .jpeg({ quality: 82 })
-      .toBuffer();
-
-    return `data:image/jpeg;base64,${cropped.toString('base64')}`;
-  } catch {
-    return '';
-  }
-}
-
-function buildSystemPrompt(goal: string, style: string, lang: string): string {
-  return `את מאפרת מקצועית ונחמדה שמסתכלת על תמונת האיפור ועוזרת לשפר אותו.
-
-הקשר: מטרת האיפור: ${goal} | סגנון: ${style} | שפה: ${lang}
-
-הטון שלך כמו חברה שמבינה באיפור — נחמדה, ישירה, עממית. מחמיאה כשיש על מה, אבל גם מסבירה מה לתקן ואיך.
-
-דוגמה לתיקון טוב:
-compliment: "האייליינר נראה ממש יפה ומרים את העין."
-recommendation: "הייתי מרככת טיפה את הקצה החיצוני — בצד שקרוב לאוזן — כדי שהמעבר ייראה חלק יותר. אפשר לטשטש עם מברשת קטנה תוך 10 שניות."
+הטון: חברה שמבינה באיפור — נחמדה, ישירה, עממית. מחמיאה כשיש על מה.
 
 חוקים:
-- אל תדברי על מבנה הפנים, רק על האיפור
-- בדיוק 3 תיקונים
-- כל recommendation: לפחות 2 משפטים, ספציפי ועממי
-- אל תשתמשי במילים: גרוע, בעייתי, לא טוב, מכוער
+- אל תדברי על מבנה פנים או תכונות גופניות — רק על האיפור
+- אל תשתמשי במילים: גרוע, בעייתי, לא טוב, מכוער, שגיאה
+- כל recommendation: לפחות 2 משפטים, ספציפי, עם הוראות מעשיות
+- quick_action: 3-5 מילים בלבד (לדוגמה: "טשטשי את הקרייס", "נקי כנף ימין")
+- marker_position: x,y כאחוזים של התמונה (0-100). מקמי בדיוק על האזור הספציפי
+- marker_color: בחרי מהרשימה לפי סדר: ${MARKER_COLORS.join(', ')}
 
-אזורי הפנים הזמינים לתיקון:
-- "eyes" — עיניים וצללית
-- "brows" — גבות
-- "lips" — שפתיים
-- "blush" — סומק ולחיים
-- "base" — בסיס ועור
+כמות המלצות: 0-5 לפי הצורך האמיתי. אם האיפור מושלם — החזירי 0. אל תמציאי תיקונים.
+הציון: 1-10 (7-8 = טוב, 8.5-9.5 = מעולה, 10 = מושלם).
 
-החזר תמיד JSON תקין, גם אם האיפור לא ברור. אם אין איפור ברור — תני score נמוך ו-3 עצות בסיסיות.
-החזר JSON בלבד:
+החזר JSON בלבד (ללא שום טקסט אחר):
 {
-  "is_valid": true,
   "score": number,
-  "summary": "משפט קצר ונחמד",
-  "fixes": [
+  "summary": "משפט קצר ונחמד על הלוק הכללי",
+  "recommendations": [
     {
-      "area": "eyes/brows/lips/blush/base",
+      "area": "שם האזור",
       "title": "כותרת קצרה",
-      "compliment": "מחמאה ספציפית",
+      "compliment": "מחמאה ספציפית לאזור (אופציונלי)",
       "recommendation": "לפחות 2 משפטים — מה לתקן, איפה, ואיך",
-      "location_explanation": "תיאור המיקום"
+      "quick_action": "3-5 מילים",
+      "marker_color": "#FF5BA7",
+      "marker_position": { "x": 50, "y": 38 }
     }
   ]
-}
-אל תוסיפי שום דבר מחוץ ל-JSON.`;
+}`;
+  }
+
+  return `You are a professional makeup expert analyzing makeup photos and giving precise recommendations.
+
+Makeup goal: ${goalLabel}
+Desired style: ${styleLabel}
+
+Goal-specific guidance: ${goalGuide}
+Style-specific guidance: ${styleGuide}
+
+The 10 makeup zones you analyze:
+1. Base & Foundation (coverage, finish, undertone match)
+2. Concealer (dark circles, spots, coverage)
+3. Eyeshadow (blending, transitions, color choices)
+4. Eyeliner (precision, wings, symmetry)
+5. Lashes & Mascara (length, volume, curl, clumping)
+6. Brows (shape, fill, symmetry, arch)
+7. Blush (placement, blending, intensity)
+8. Bronzer & Contour (placement, blending, dimension)
+9. Lips (color, precision, liner, fullness)
+10. Color Harmony & Overall Balance (cohesion, proportions)
+
+${isRescan ? 'This is a second photo after the user made corrections. Compare to the previous analysis and highlight improvements.' : ''}
+
+Tone: Like a knowledgeable friend — warm, direct, practical. Compliment what's working.
+
+Rules:
+- Never comment on facial structure or physical features — only makeup
+- Never use words: terrible, bad, wrong, ugly, mistake
+- Each recommendation: minimum 2 sentences, specific, with practical instructions
+- quick_action: 3-5 words only (e.g., "Blend crease edges", "Clean right wing")
+- marker_position: x,y as percentage of image (0-100). Place precisely on the specific area
+- marker_color: choose from this list in order: ${MARKER_COLORS.join(', ')}
+
+Number of recommendations: 0-5 based on genuine need. If makeup is perfect — return 0. Don't invent fixes.
+Score: 1-10 (7-8 = good, 8.5-9.5 = excellent, 10 = flawless).
+
+Return ONLY valid JSON (no other text):
+{
+  "score": number,
+  "summary": "Short warm sentence about the overall look",
+  "recommendations": [
+    {
+      "area": "area name",
+      "title": "Short title",
+      "compliment": "Specific compliment for this area (optional)",
+      "recommendation": "At least 2 sentences — what to fix, where, and how",
+      "quick_action": "3-5 words",
+      "marker_color": "#FF5BA7",
+      "marker_position": { "x": 50, "y": 38 }
+    }
+  ]
+}`;
 }
 
 app.post('/analyze', upload.single('image'), async (req, res) => {
@@ -186,54 +208,63 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     }
 
     const { goal = 'daily', style = 'natural', language = 'en' } = req.body;
+    const previousScore = req.body.previous_score ? Number(req.body.previous_score) : null;
+    const previousRecs = req.body.previous_recommendations
+      ? (() => { try { return JSON.parse(req.body.previous_recommendations); } catch { return null; } })()
+      : null;
+
+    const isRescan = previousScore !== null && previousRecs !== null;
     const base64 = req.file.buffer.toString('base64');
     const mimeType = req.file.mimetype || 'image/jpeg';
-    const lang = language === 'he' ? 'עברית' : 'English';
 
-    const systemPrompt = buildSystemPrompt(
-      GOAL_LABELS[goal] ?? goal,
-      STYLE_LABELS[style] ?? style,
-      lang
-    );
+    const systemPrompt = buildSystemPrompt(goal, style, language, isRescan);
 
-    // Detect landmarks and analyze in parallel
-    const [landmarks, analysisResponse] = await Promise.all([
-      detectLandmarks(base64, mimeType),
-      openai.chat.completions.create({
-        model: 'gpt-4o',
-        response_format: { type: 'json_object' },
-        max_tokens: 1500,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'נתחי את האיפור.' },
-              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } },
-            ],
-          },
-        ],
-      }),
-    ]);
+    let userContent: any[] = [
+      { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } },
+    ];
 
-    // Crop face image
-    const face_image = await cropFace(req.file.buffer, landmarks);
+    if (isRescan && previousScore !== null && previousRecs !== null) {
+      const prevSummary = language === 'he'
+        ? `ניתוח קודם: ציון ${previousScore}. תיקונים שהומלצו: ${previousRecs.map((r: any) => r.title).join(', ')}.`
+        : `Previous analysis: score ${previousScore}. Recommendations were: ${previousRecs.map((r: any) => r.title).join(', ')}.`;
+      userContent = [
+        { type: 'text', text: prevSummary },
+        ...userContent,
+      ];
+    } else {
+      const promptText = language === 'he' ? 'נתחי את האיפור בתמונה.' : 'Analyze the makeup in this photo.';
+      userContent = [{ type: 'text', text: promptText }, ...userContent];
+    }
+
+    const analysisResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      response_format: { type: 'json_object' },
+      max_tokens: 2000,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+    });
 
     const raw = analysisResponse.choices[0].message.content ?? '{}';
     const result = JSON.parse(raw);
 
-    // Always treat as valid — never block real user photos
-    result.is_valid = true;
-
-    // Add zone info to each fix
-    if (Array.isArray(result.fixes)) {
-      result.fixes = result.fixes.map((fix: any) => ({
-        ...fix,
-        zone: ZONES[fix.area] ?? ZONES.base,
-      }));
+    // Ensure recommendations array exists
+    if (!Array.isArray(result.recommendations)) {
+      result.recommendations = [];
     }
 
-    res.json({ ...result, face_image });
+    // Enforce marker colors in order (override AI if it deviated)
+    result.recommendations = result.recommendations.slice(0, 5).map((rec: any, i: number) => ({
+      ...rec,
+      marker_color: MARKER_COLORS[i % MARKER_COLORS.length],
+      marker_position: {
+        x: Math.max(5, Math.min(95, Number(rec.marker_position?.x ?? 50))),
+        y: Math.max(5, Math.min(95, Number(rec.marker_position?.y ?? 50))),
+      },
+    }));
+
+    res.json(result);
   } catch (err) {
     console.error('Analysis error:', err);
     res.status(500).json({ error: 'Analysis failed' });

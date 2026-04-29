@@ -2,31 +2,20 @@ export type Language = 'en' | 'he';
 export type Goal = 'daily' | 'work' | 'date' | 'event' | 'photo';
 export type Style = 'natural' | 'clean' | 'softGlam' | 'fullGlam' | 'dramatic' | 'bold';
 
-export interface Zone {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  label: string;
-  number: number;
-}
-
-export interface Fix {
+export interface Recommendation {
   area: string;
   title: string;
   compliment?: string;
-  recommendation?: string;
-  location_explanation?: string;
-  zone?: Zone;
-  // legacy mock fields
-  simple_instruction?: string;
-  marker_position?: { x: number; y: number };
+  recommendation: string;
+  quick_action: string;
+  marker_color: string;
+  marker_position: { x: number; y: number };
 }
 
 export interface AnalysisResult {
   score: number;
   summary: string;
-  fixes: Fix[];
+  recommendations: Recommendation[];
   face_image?: string;
 }
 
