@@ -40,11 +40,6 @@ export default function FixCard({ rec, index, locked = false, onUnlock, isRTL }:
           </Text>
           {!locked && (
             <>
-              {rec.compliment ? (
-                <Text style={[styles.compliment, { textAlign: isRTL ? 'right' : 'left', color: accentColor }]}>
-                  {rec.compliment}
-                </Text>
-              ) : null}
               <Text style={[styles.recommendation, { textAlign: isRTL ? 'right' : 'left' }]}>
                 {rec.recommendation}
               </Text>
@@ -104,7 +99,6 @@ const styles = StyleSheet.create({
   badgeNum: { color: '#fff', fontWeight: '800', fontSize: 13 },
   content: { flex: 1, gap: 5 },
   title: { fontSize: 15, fontWeight: '700', color: COLORS.white },
-  compliment: { fontSize: 13, lineHeight: 19, fontWeight: '500' },
   recommendation: { fontSize: 13, color: COLORS.muted, lineHeight: 19 },
   quickRow: { marginTop: 4 },
   quickPill: {

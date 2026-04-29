@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Language, Goal, Style, AnalysisResult } from '../types';
+import { Language, Goal, Style, AnalysisResult, RescanResult } from '../types';
 
 interface SessionState {
   imageUri: string | null;
@@ -7,6 +7,7 @@ interface SessionState {
   style: Style | null;
   inspirationImageUri: string | null;
   result: AnalysisResult | null;
+  rescanResult: RescanResult | null;
   previousResult: AnalysisResult | null;
   previousImageUri: string | null;
   isPro: boolean;
@@ -20,6 +21,7 @@ interface AppContextType extends SessionState {
   setStyle: (style: Style) => void;
   setInspirationImage: (uri: string | null) => void;
   setResult: (result: AnalysisResult) => void;
+  setRescanResult: (result: RescanResult) => void;
   startRescan: () => void;
   resetSession: () => void;
   setIsPro: (val: boolean) => void;
@@ -32,6 +34,7 @@ const defaultSession: SessionState = {
   style: null,
   inspirationImageUri: null,
   result: null,
+  rescanResult: null,
   previousResult: null,
   previousImageUri: null,
   isPro: false,
@@ -46,6 +49,7 @@ export const AppContext = createContext<AppContextType>({
   setStyle: () => {},
   setInspirationImage: () => {},
   setResult: () => {},
+  setRescanResult: () => {},
   startRescan: () => {},
   resetSession: () => {},
   setIsPro: () => {},
@@ -53,7 +57,7 @@ export const AppContext = createContext<AppContextType>({
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('he');
   const [session, setSession] = useState<SessionState>(defaultSession);
 
   const setImage = useCallback((uri: string) => {
@@ -73,7 +77,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setResult = useCallback((result: AnalysisResult) => {
-    setSession(prev => ({ ...prev, result }));
+    setSession(prev => ({ ...prev, result, rescanResult: null }));
+  }, []);
+
+  const setRescanResult = useCallback((result: RescanResult) => {
+    setSession(prev => ({ ...prev, rescanResult: result }));
   }, []);
 
   const startRescan = useCallback(() => {
@@ -83,6 +91,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       previousImageUri: prev.imageUri,
       imageUri: null,
       result: null,
+      rescanResult: null,
     }));
   }, []);
 
@@ -93,6 +102,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       previousImageUri: prev.imageUri,
       imageUri: newImageUri,
       result: null,
+      rescanResult: null,
     }));
   }, []);
 
@@ -115,6 +125,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setStyle,
         setInspirationImage,
         setResult,
+        setRescanResult,
         startRescan,
         resetSession,
         setIsPro,

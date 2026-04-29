@@ -20,14 +20,14 @@ import LogoCircles from '../components/LogoCircles';
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Analyzing'>;
 type Route = RouteProp<RootStackParamList, 'Analyzing'>;
 
-const MESSAGE_INTERVAL = 1200;
+const MESSAGE_INTERVAL = 1400;
 
 export default function AnalyzingScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { isRescan } = route.params;
 
-  const { imageUri, goal, style, setResult, language, previousResult } = useApp();
+  const { imageUri, goal, style, setResult, setRescanResult, language, previousResult } = useApp();
   const t = useT();
 
   const messages = t.analyzing.messages;
@@ -38,13 +38,11 @@ export default function AnalyzingScreen() {
   const imageOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade image in
     Animated.parallel([
       Animated.timing(imageOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.spring(imageScale, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
     ]).start();
 
-    // Cycle messages with fade
     const msgTimer = setInterval(() => {
       Animated.sequence([
         Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
@@ -54,7 +52,6 @@ export default function AnalyzingScreen() {
     }, MESSAGE_INTERVAL);
 
     let cancelled = false;
-
     const stop = () => clearInterval(msgTimer);
 
     const run = async () => {
@@ -66,25 +63,39 @@ export default function AnalyzingScreen() {
 
         const result = await analyzeMakeup(
           imageUri, goal, style, language,
-          isRescan ? previousResult ?? undefined : undefined
+          isRescan ? (previousResult ?? undefined) : undefined
         );
 
         if (cancelled) return;
         stop();
 
-        setResult({
-          score: result.score,
-          summary: result.summary,
-          recommendations: result.recommendations,
-          face_image: result.face_image,
-        });
-        navigation.replace(isRescan ? 'Rescan' : 'Results');
+        // Handle invalid image
+        if (!result.is_valid) {
+          Alert.alert(
+            language === 'he' ? 'לא זוהו פנים' : 'Face Not Detected',
+            result.message,
+            [{ text: language === 'he' ? 'צלמי שוב' : 'Retake', onPress: () => navigation.navigate('Capture', { isRescan }) }]
+          );
+          return;
+        }
+
+        // Handle rescan result
+        if ('is_rescan' in result && result.is_rescan) {
+          setRescanResult(result);
+          navigation.replace('Rescan');
+          return;
+        }
+
+        // Handle initial analysis result
+        setResult(result as import('../types').AnalysisResult);
+        navigation.replace('Results');
+
       } catch (err) {
         if (cancelled) return;
         stop();
         const isTimeout = err instanceof Error && err.name === 'AbortError';
         const msg = isTimeout
-          ? (language === 'he' ? 'הבקשה לקחה יותר מדי זמן.' : 'Request timed out.')
+          ? (language === 'he' ? 'הבקשה לקחה יותר מדי זמן. נסי שוב.' : 'Request timed out. Please try again.')
           : (err instanceof Error ? err.message : String(err));
         Alert.alert(
           language === 'he' ? 'שגיאה' : 'Error',
@@ -105,7 +116,6 @@ export default function AnalyzingScreen() {
   return (
     <View style={styles.bg}>
       <SafeAreaView style={styles.safe}>
-        {/* Top: image preview */}
         {imageUri && (
           <Animated.View style={[styles.imageWrap, { opacity: imageOpacity, transform: [{ scale: imageScale }] }]}>
             <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
@@ -113,12 +123,10 @@ export default function AnalyzingScreen() {
           </Animated.View>
         )}
 
-        {/* Center: spinning logo */}
         <View style={styles.logoWrap}>
           <LogoCircles size={180} spin pulse />
         </View>
 
-        {/* Bottom: text */}
         <View style={styles.textWrap}>
           <Animated.Text style={[styles.message, { opacity: fadeAnim }]}>
             {messages[msgIndex]}
@@ -159,14 +167,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(15,15,16,0.2)',
   },
-  logoWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textWrap: {
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
+  logoWrap: { alignItems: 'center', justifyContent: 'center' },
+  textWrap: { alignItems: 'center', gap: SPACING.sm },
   message: {
     fontSize: 20,
     fontWeight: '700',

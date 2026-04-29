@@ -26,7 +26,7 @@ export async function analyzeMakeup(
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), 75000);
 
   let response: Response;
   try {

@@ -5,6 +5,7 @@ import { RootStackParamList } from '../types';
 
 import WelcomeScreen from '../screens/WelcomeScreen';
 import CaptureScreen from '../screens/CaptureScreen';
+import ConfirmScreen from '../screens/ConfirmScreen';
 import GoalScreen from '../screens/GoalScreen';
 import StyleScreen from '../screens/StyleScreen';
 import AnalyzingScreen from '../screens/AnalyzingScreen';
@@ -23,6 +24,7 @@ export default function AppNavigator() {
       >
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="Capture" component={CaptureScreen} />
+        <Stack.Screen name="Confirm" component={ConfirmScreen} />
         <Stack.Screen name="Goal" component={GoalScreen} />
         <Stack.Screen name="Style" component={StyleScreen} />
         <Stack.Screen

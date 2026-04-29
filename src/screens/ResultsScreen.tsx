@@ -31,6 +31,7 @@ export default function ResultsScreen() {
   if (!result || !imageUri) return null;
 
   const recs = result.recommendations ?? [];
+  const isPerfect = result.score >= 10;
 
   const handleRescan = () => {
     if (!isPro) { navigation.navigate('Paywall'); return; }
@@ -38,6 +39,7 @@ export default function ResultsScreen() {
   };
 
   const handleUnlock = () => navigation.navigate('Paywall');
+  const handleNewCheck = () => navigation.navigate('Welcome');
 
   return (
     <View style={styles.bg}>
@@ -58,21 +60,33 @@ export default function ResultsScreen() {
             <ScoreBadge score={result.score ?? 0} size="large" animate />
             <Text style={styles.scoreLabel}>{t.results.scoreLabel}</Text>
             <Text style={[styles.summary, rtlText(isRTL)]}>{result.summary ?? ''}</Text>
+            {result.photo_quality_note ? (
+              <View style={styles.qualityNote}>
+                <Ionicons name="warning-outline" size={14} color={COLORS.yellow} />
+                <Text style={[styles.qualityNoteText, rtlText(isRTL)]}>{result.photo_quality_note}</Text>
+              </View>
+            ) : null}
           </View>
 
-          {/* Face with dot markers */}
-          <View style={styles.imageSection}>
-            <ImageWithMarkers
-              imageUri={imageUri}
-              faceImage={result.face_image}
-              recommendations={recs}
-              showAll={isPro}
-            />
-          </View>
+          {/* Face with dot markers — only if there are recs to show */}
+          {recs.length > 0 && (
+            <View style={styles.imageSection}>
+              <ImageWithMarkers
+                imageUri={imageUri}
+                recommendations={recs}
+                showAll={isPro}
+              />
+            </View>
+          )}
 
           {/* Recommendations */}
           <View style={styles.fixesSection}>
-            {recs.length === 0 ? (
+            {isPerfect ? (
+              <View style={styles.perfectWrap}>
+                <Text style={styles.perfectEmoji}>✨</Text>
+                <Text style={[styles.perfectText, rtlText(isRTL)]}>{t.results.perfect}</Text>
+              </View>
+            ) : recs.length === 0 ? (
               <View style={styles.perfectWrap}>
                 <Text style={styles.perfectEmoji}>✨</Text>
                 <Text style={[styles.perfectText, rtlText(isRTL)]}>
@@ -118,24 +132,39 @@ export default function ResultsScreen() {
             )}
           </View>
 
-          {/* Rescan */}
-          <View style={styles.rescanSection}>
-            <TouchableOpacity style={styles.rescanBtn} onPress={handleRescan} activeOpacity={0.85}>
-              <LinearGradient
-                colors={GRADIENTS.primary}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={styles.rescanGradient}
-              >
-                <Ionicons name="refresh-outline" size={20} color={COLORS.white} />
-                <Text style={styles.rescanText}>{t.results.rescan}</Text>
-                {!isPro && (
-                  <View style={styles.proTag}>
-                    <Ionicons name="lock-closed" size={9} color={COLORS.dark} />
-                    <Text style={styles.proTagText}>Pro</Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+          {/* CTA */}
+          <View style={styles.ctaSection}>
+            {isPerfect ? (
+              <TouchableOpacity style={styles.rescanBtn} onPress={handleNewCheck} activeOpacity={0.85}>
+                <LinearGradient
+                  colors={GRADIENTS.tealGreen}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.rescanGradient}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.white} />
+                  <Text style={styles.rescanText}>
+                    {isRTL ? 'התחילי בדיקה חדשה' : 'Start New Check'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.rescanBtn} onPress={handleRescan} activeOpacity={0.85}>
+                <LinearGradient
+                  colors={GRADIENTS.primary}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.rescanGradient}
+                >
+                  <Ionicons name="camera-outline" size={20} color={COLORS.white} />
+                  <Text style={styles.rescanText}>{t.results.continueImproving}</Text>
+                  {!isPro && (
+                    <View style={styles.proTag}>
+                      <Ionicons name="lock-closed" size={9} color={COLORS.dark} />
+                      <Text style={styles.proTagText}>Pro</Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -169,6 +198,13 @@ const styles = StyleSheet.create({
     fontSize: 15, color: COLORS.white, lineHeight: 22,
     textAlign: 'center', maxWidth: 320,
   },
+  qualityNote: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.xs,
+    backgroundColor: 'rgba(255,203,87,0.1)', borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
+    borderWidth: 1, borderColor: 'rgba(255,203,87,0.3)',
+  },
+  qualityNoteText: { fontSize: 12, color: COLORS.yellow, flex: 1, lineHeight: 17 },
   imageSection: { paddingHorizontal: SPACING.lg, marginBottom: SPACING.lg },
   fixesSection: { paddingHorizontal: SPACING.lg, marginBottom: SPACING.lg },
   fixesTitle: { fontSize: 18, fontWeight: '800', color: COLORS.white, marginBottom: SPACING.md },
@@ -190,7 +226,7 @@ const styles = StyleSheet.create({
   perfectWrap: { alignItems: 'center', gap: SPACING.sm, paddingVertical: SPACING.lg },
   perfectEmoji: { fontSize: 32 },
   perfectText: { fontSize: 15, color: COLORS.muted, textAlign: 'center', lineHeight: 22 },
-  rescanSection: { paddingHorizontal: SPACING.lg },
+  ctaSection: { paddingHorizontal: SPACING.lg },
   rescanBtn: {
     borderRadius: RADIUS.round, overflow: 'hidden',
     shadowColor: COLORS.pink, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 7,
