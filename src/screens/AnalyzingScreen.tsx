@@ -77,15 +77,6 @@ export default function AnalyzingScreen() {
         if (cancelled) return;
         stop();
 
-        if (!result.is_valid) {
-          Alert.alert(
-            language === 'he' ? 'שגיאה בתמונה' : 'Invalid photo',
-            result.message,
-            [{ text: 'OK', onPress: () => navigation.navigate('Capture', { isRescan }) }]
-          );
-          return;
-        }
-
         setResult({
           score: result.score,
           summary: result.summary,

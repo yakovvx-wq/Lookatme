@@ -27,16 +27,7 @@ export interface AnalysisResult {
   face_image?: string;
 }
 
-export interface AnalysisError {
-  is_valid: false;
-  message: string;
-}
-
-export interface AnalysisSuccess extends AnalysisResult {
-  is_valid: true;
-}
-
-export type AnalysisResponse = AnalysisSuccess | AnalysisError;
+export type AnalysisResponse = AnalysisResult;
 
 export type RootStackParamList = {
   Welcome: undefined;
